@@ -1,5 +1,7 @@
 import json
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from math import isfinite
 from urllib import error as urllib_error
 from urllib import request as urllib_request
 
@@ -40,6 +42,7 @@ RATES_FORWARD_MAX_ATTEMPTS = 4    # final window: 1.5 * 2^3 = 12x
 TICKS_BACKWARD_INITIAL_SEC_PER_TICK = 0.1  # ~10 ticks/sec assumption
 TICKS_BACKWARD_FLOOR_WINDOW_SEC = 60       # min window for sparse symbols
 TICKS_BACKWARD_MAX_ATTEMPTS = 6   # final window: floor * 2^5
+MARGIN_RATE_QUANTUM = Decimal("0.00000001")
 
 
 def _parse_anchor(s):
@@ -111,6 +114,120 @@ def get_tick(symbol):
     if tick is None:
         return jsonify({"error": f"No tick for {symbol}"}), 404
     return jsonify(to_dict(tick))
+
+
+def _decimal(value):
+    return Decimal(str(value))
+
+
+def _margin_side(*, symbol, order_type, side, volume, price, info):
+    margin = m(mt5.order_calc_margin, order_type, symbol, float(volume), price)
+    if margin is None or not isfinite(float(margin)) or float(margin) <= 0:
+        return None, (
+            jsonify({"error": f"MT5 could not calculate {side} margin for {symbol}"}),
+            422,
+        )
+
+    denominator = (
+        volume
+        * _decimal(info.trade_contract_size)
+        * _decimal(price)
+        * _decimal(info.trade_tick_value)
+        / _decimal(info.trade_tick_size)
+    )
+    if denominator <= 0:
+        return None, (
+            jsonify({"error": f"Invalid CFD_INDEX margin inputs for {symbol}"}),
+            422,
+        )
+    effective_rate = (_decimal(margin) / denominator).quantize(
+        MARGIN_RATE_QUANTUM,
+        rounding=ROUND_HALF_UP,
+    )
+    if effective_rate <= 0:
+        return None, (
+            jsonify({"error": f"Calculated {side} margin rate is below supported precision"}),
+            422,
+        )
+    return {
+        "price": float(price),
+        "margin": float(margin),
+        "effective_margin_rate": float(effective_rate),
+    }, None
+
+
+@with_mt5
+def get_margin_preview(symbol):
+    """Return a read-only BUY/SELL margin calculation for CFD_INDEX symbols."""
+    if not ensure_initialized():
+        return jsonify({"error": "MT5 not initialized"}), 503
+    if not ensure_symbol(symbol):
+        return jsonify({"error": f"Symbol {symbol} not found"}), 404
+
+    info = m(mt5.symbol_info, symbol)
+    tick = m(mt5.symbol_info_tick, symbol)
+    account = m(mt5.account_info)
+    if info is None or tick is None or account is None:
+        return jsonify({"error": f"MT5 data unavailable for {symbol}"}), 503
+    if int(info.trade_calc_mode) != 4:
+        return jsonify({"error": "margin preview currently supports trade_calc_mode=4 only"}), 422
+
+    try:
+        volume = _decimal(request.args.get("volume", "1"))
+    except (InvalidOperation, TypeError, ValueError):
+        return jsonify({"error": "volume must be a positive decimal"}), 400
+    if not volume.is_finite() or volume <= 0:
+        return jsonify({"error": "volume must be a positive decimal"}), 400
+
+    minimum = _decimal(info.volume_min)
+    maximum = _decimal(info.volume_max)
+    step = _decimal(info.volume_step)
+    if volume < minimum or volume > maximum:
+        return jsonify({"error": "volume is outside symbol min/max"}), 400
+    if step <= 0 or (volume - minimum) % step != 0:
+        return jsonify({"error": "volume is not aligned to symbol volume_step"}), 400
+    if min(
+        float(tick.bid),
+        float(tick.ask),
+        float(info.trade_contract_size),
+        float(info.trade_tick_size),
+        float(info.trade_tick_value),
+    ) <= 0:
+        return jsonify({"error": f"Invalid price or contract metadata for {symbol}"}), 422
+
+    buy, error = _margin_side(
+        symbol=symbol,
+        order_type=mt5.ORDER_TYPE_BUY,
+        side="BUY",
+        volume=volume,
+        price=float(tick.ask),
+        info=info,
+    )
+    if error is not None:
+        return error
+    sell, error = _margin_side(
+        symbol=symbol,
+        order_type=mt5.ORDER_TYPE_SELL,
+        side="SELL",
+        volume=volume,
+        price=float(tick.bid),
+        info=info,
+    )
+    if error is not None:
+        return error
+
+    return jsonify({
+        "symbol": symbol,
+        "volume": float(volume),
+        "account_currency": account.currency,
+        "account_leverage": int(account.leverage),
+        "trade_calc_mode": int(info.trade_calc_mode),
+        "trade_contract_size": float(info.trade_contract_size),
+        "trade_tick_size": float(info.trade_tick_size),
+        "trade_tick_value": float(info.trade_tick_value),
+        "buy": buy,
+        "sell": sell,
+    })
 
 
 def _rates_to_dicts(rates):

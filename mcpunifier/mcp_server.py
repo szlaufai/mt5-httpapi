@@ -41,6 +41,7 @@ _ROUTE_CATALOG: tuple[tuple[str, str], ...] = (
     ("GET", "/symbols"),
     ("GET", "/symbols/<symbol>"),
     ("GET", "/symbols/<symbol>/tick"),
+    ("GET", "/symbols/<symbol>/margin"),
     ("GET", "/symbols/<symbol>/rates"),
     ("POST", "/symbols/<symbol>/rates/ta"),
     ("GET", "/symbols/<symbol>/ticks"),
@@ -71,7 +72,7 @@ dedicated typed tools. Each tool takes `broker` and `account` (plus optional
 what is configured, including whether each one is a live or demo account.
 
 Tool families: health/terminal (ping, get_terminal, terminal_control), account
-(get_account), market data (list_symbols, get_symbol, get_tick, get_rates,
+(get_account), market data (list_symbols, get_symbol, get_tick, get_margin_preview, get_rates,
 get_ticks, get_rates_ta), positions (list_positions, get_position,
 modify_position, close_position), orders (list_orders, get_order, create_order,
 modify_order, cancel_order), history (get_history_orders, get_history_deals),
@@ -215,6 +216,28 @@ def build_mcp_server(settings: Settings, client: TerminalClient) -> FastMCP:
         """Get the latest bid/ask/last tick for one symbol
         (``GET /symbols/{symbol}/tick``)."""
         return await call(broker, account, instance, "GET", f"/symbols/{symbol}/tick")
+
+    @mcp.tool()
+    async def get_margin_preview(
+        broker: str,
+        account: str,
+        symbol: str,
+        volume: float = 1.0,
+        instance: str = DEFAULT_INSTANCE,
+    ) -> dict[str, Any]:
+        """Calculate current BUY and SELL margin without placing an order.
+
+        Returns the MT5 ``order_calc_margin`` result and effective CFD_INDEX
+        margin rate (``GET /symbols/{symbol}/margin?volume=...``).
+        """
+        return await call(
+            broker,
+            account,
+            instance,
+            "GET",
+            f"/symbols/{symbol}/margin",
+            query={"volume": volume},
+        )
 
     @mcp.tool()
     async def get_rates(

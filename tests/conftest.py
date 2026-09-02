@@ -48,7 +48,7 @@ def _install_mt5_stub():
         "copy_ticks_from", "copy_ticks_range",
         "account_info", "positions_get", "orders_get",
         "history_orders_get", "history_deals_get",
-        "order_send", "order_check",
+        "order_send", "order_check", "order_calc_margin",
     ):
         setattr(mt5, fn, MagicMock())
     sys.modules["MetaTrader5"] = mt5

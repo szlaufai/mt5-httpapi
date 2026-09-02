@@ -20,7 +20,7 @@ readonly HOST_PORT=6699
 readonly READY_TIMEOUT_SECONDS=30
 readonly LIVE_TERMINAL_PORT=6545
 readonly DOWN_TERMINAL_PORT=6542
-readonly EXPECTED_TOOL_COUNT=25
+readonly EXPECTED_TOOL_COUNT=26
 readonly DIAGNOSE_LOG_LINES=20
 
 # Resolved from this script's own location so the harness works from any cwd

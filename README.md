@@ -341,6 +341,7 @@ If `utc_offset` is omitted (or `0`), the API passes raw broker timestamps throug
 | GET    | `/symbols`               | List symbols (`?group=*USD*`)             |
 | GET    | `/symbols/:symbol`       | Symbol details                            |
 | GET    | `/symbols/:symbol/tick`  | Latest tick                               |
+| GET    | `/symbols/:symbol/margin` | Read-only BUY/SELL margin preview (`?volume=1`) for `trade_calc_mode=4` |
 | GET    | `/symbols/:symbol/rates` | OHLCV candles (`?timeframe=H1&count=100`, `?timeframe=H1&from=<unix>&count=-100`, or `?timeframe=H1&from=<unix>&to=<unix>`) |
 | POST   | `/symbols/:symbol/rates/ta` | Same query params as `/rates`; JSON body `{indicators: {...}, recentBars?: N}`. Returns bars + wickworks TA analysis. |
 | GET    | `/symbols/:symbol/ticks` | Tick data (`?count=100`, `?from=<unix>&count=-100`, or `?from=<unix>&to=<unix>`)                                            |
@@ -445,6 +446,31 @@ There's a shitload of fields — these are the ones you'll actually use:
   "volume_real": 0.0
 }
 ```
+
+**GET `/symbols/:symbol/margin?volume=1`** — calculate current BUY and SELL
+margin with MT5 `order_calc_margin` without sending an order. The endpoint is
+currently restricted to `trade_calc_mode=4`; `effective_margin_rate` is the
+rate that reproduces MT5's result with the symbol's current contract, tick and
+price metadata:
+
+```json
+{
+  "symbol": "XAUUSD.p",
+  "volume": 1.0,
+  "account_currency": "USD",
+  "account_leverage": 100,
+  "trade_calc_mode": 4,
+  "trade_contract_size": 100.0,
+  "trade_tick_size": 0.01,
+  "trade_tick_value": 1.0,
+  "buy": {"price": 4600.34, "margin": 4600.34, "effective_margin_rate": 0.0001},
+  "sell": {"price": 4599.96, "margin": 4599.96, "effective_margin_rate": 0.0001}
+}
+```
+
+The requested volume must obey the symbol's `volume_min`, `volume_max` and
+`volume_step`. A failed MT5 calculation returns `422`; no `order_send` call is
+made.
 
 **GET `/symbols/:symbol/rates`** — array of OHLCV candles:
 
@@ -1263,7 +1289,7 @@ Both are always available; neither disables the other. See [One endpoint for eve
 
 Every terminal mounts its own server at `/mcp`, alongside the REST API, in the same process. It exposes **dedicated, typed tools** grouped by family — each tool's name, typed params, and description are what the agent reads (no guessing at raw paths). Every tool runs the exact same handler, auth, and MT5 locking as a real HTTP request.
 
-- **Market data** — `list_symbols`, `get_symbol`, `get_tick`, `get_rates(symbol, timeframe, count?)`, `get_ticks`, `get_rates_ta`
+- **Market data** — `list_symbols`, `get_symbol`, `get_tick`, `get_margin_preview(symbol, volume?)`, `get_rates(symbol, timeframe, count?)`, `get_ticks`, `get_rates_ta`
 - **Account / positions** — `get_account`, `list_positions`, `get_position`, `modify_position`, `close_position`
 - **Orders** — `list_orders`, `get_order`, `create_order(symbol, type, volume, price?, sl?, tp?)`, `modify_order`, `cancel_order`
 - **History / terminal / backtest** — `get_history_orders`, `get_history_deals`, `get_terminal`, `terminal_control`, `get_backtest`, `ping`

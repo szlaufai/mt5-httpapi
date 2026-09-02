@@ -6,6 +6,17 @@ The project follows [Semantic Versioning](https://semver.org/): patch = bug fixe
 
 ---
 
+## Unreleased
+
+### Added
+
+- Added read-only `GET /symbols/<symbol>/margin?volume=...` for
+  `trade_calc_mode=4` symbols. It calls MT5 `order_calc_margin` for BUY and SELL
+  at the current ask/bid and returns both margin amounts and effective rates,
+  without placing an order. The Go client and both MCP surfaces expose the same
+  operation. The unified MCP regression check now expects the resulting
+  26-tool surface.
+
 ## [v4.9.3] — 2026-07-28
 
 ### Fixed

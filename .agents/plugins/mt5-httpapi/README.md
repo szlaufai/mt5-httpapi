@@ -13,14 +13,15 @@ requires one.
 
 > mt5-httpapi is **self-hosted** and talks to a **live trading terminal**. This
 > plugin does not ship the MT5 bridge — it connects to a terminal that **you**
-> run. See the [mt5-httpapi repo](https://github.com/psyb0t/mt5-httpapi) to
+> run. See the [mt5-httpapi repo](https://github.com/szlaufai/mt5-httpapi) to
 > stand one up.
 
 ## Tools
 
 The mt5-httpapi MCP tools become available to your agent — **dedicated typed
 tools** grouped by family (each with typed params + a description the agent
-reads): market data (`list_symbols`, `get_symbol`, `get_tick`, `get_rates`,
+reads): market data (`list_symbols`, `get_symbol`, `get_tick`,
+`get_margin_preview`, `get_rates`,
 `get_ticks`, `get_rates_ta`), account/positions (`get_account`,
 `list_positions`, `get_position`, `modify_position`, `close_position`), orders
 (`list_orders`, `get_order`, `create_order`, `modify_order`, `cancel_order`),

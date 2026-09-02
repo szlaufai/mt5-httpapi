@@ -8,7 +8,7 @@ HTTP request — one code path, always in sync with the REST API.
 Tool families:
   - Health/terminal — ``ping``, ``get_terminal``, ``terminal_control``
   - Account          — ``get_account``
-  - Market data      — ``list_symbols``, ``get_symbol``, ``get_tick``,
+  - Market data      — ``list_symbols``, ``get_symbol``, ``get_tick``, ``get_margin_preview``,
                         ``get_rates``, ``get_ticks``, ``get_rates_ta``
   - Positions        — ``list_positions``, ``get_position``,
                         ``modify_position``, ``close_position``
@@ -63,7 +63,7 @@ def build_mcp_server() -> FastMCP:
             "HTTP interface to a MetaTrader 5 terminal, exposed over MCP as "
             "dedicated typed tools grouped by family: health/terminal "
             "(ping, get_terminal, terminal_control), account (get_account), "
-            "market data (list_symbols, get_symbol, get_tick, get_rates, "
+            "market data (list_symbols, get_symbol, get_tick, get_margin_preview, get_rates, "
             "get_ticks, get_rates_ta), positions (list_positions, "
             "get_position, modify_position, close_position), orders "
             "(list_orders, get_order, create_order, modify_order, "
@@ -139,6 +139,20 @@ def build_mcp_server() -> FastMCP:
         """Get the latest bid/ask/last tick for one symbol
         (``GET /symbols/{symbol}/tick``)."""
         return await _call("GET", f"/symbols/{symbol}/tick")
+
+    @mcp.tool()
+    async def get_margin_preview(symbol: str, volume: float = 1.0) -> dict[str, Any]:
+        """Calculate current BUY and SELL margin without placing an order.
+
+        The response includes the MT5 ``order_calc_margin`` result and the
+        effective CFD_INDEX margin rate for the requested volume
+        (``GET /symbols/{symbol}/margin?volume=...``).
+        """
+        return await _call(
+            "GET",
+            f"/symbols/{symbol}/margin",
+            query={"volume": volume},
+        )
 
     @mcp.tool()
     async def get_rates(

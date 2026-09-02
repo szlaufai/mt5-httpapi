@@ -186,6 +186,25 @@ type Tick struct {
 	VolumeReal float64 `json:"volume_real"`
 }
 
+type MarginPreviewSide struct {
+	Price               float64 `json:"price"`
+	Margin              float64 `json:"margin"`
+	EffectiveMarginRate float64 `json:"effective_margin_rate"`
+}
+
+type MarginPreview struct {
+	Symbol            string            `json:"symbol"`
+	Volume            float64           `json:"volume"`
+	AccountCurrency   string            `json:"account_currency"`
+	AccountLeverage   int               `json:"account_leverage"`
+	TradeCalcMode     int               `json:"trade_calc_mode"`
+	TradeContractSize float64           `json:"trade_contract_size"`
+	TradeTickSize     float64           `json:"trade_tick_size"`
+	TradeTickValue    float64           `json:"trade_tick_value"`
+	Buy               MarginPreviewSide `json:"buy"`
+	Sell              MarginPreviewSide `json:"sell"`
+}
+
 type Rate struct {
 	Time        int64   `json:"time"`
 	Open        float64 `json:"open"`

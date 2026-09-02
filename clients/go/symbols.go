@@ -41,6 +41,24 @@ func (c *Client) GetTick(ctx context.Context, symbol string) (*Tick, error) {
 	return out, nil
 }
 
+func (c *Client) GetMarginPreview(
+	ctx context.Context,
+	symbol string,
+	volume float64,
+) (*MarginPreview, error) {
+	if volume <= 0 {
+		return nil, ctxerrors.New("margin preview: volume must be positive")
+	}
+
+	query := url.Values{"volume": []string{strconv.FormatFloat(volume, 'f', -1, 64)}}
+	out := &MarginPreview{}
+	if err := c.do(ctx, http.MethodGet, "/symbols/"+symbol+"/margin", query, nil, out); err != nil {
+		return nil, ctxerrors.Wrapf(err, "get margin preview %s", symbol)
+	}
+
+	return out, nil
+}
+
 func (c *Client) GetRates(
 	ctx context.Context,
 	symbol string,
