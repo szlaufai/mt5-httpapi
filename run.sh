@@ -15,7 +15,7 @@ exec > >(tee "${LOG_FILE}") 2>&1
 mkdir -p "${DIR}/data/storage" "${DIR}/data/shared/scripts" "${DIR}/data/shared/config" "${DIR}/data/shared/terminals" "${DIR}/data/oem" "${DIR}/assets/experts" "${DIR}/assets/sets"
 
 # Bootstrap docker-compose.yml from example on first run; user owns the real file.
-if [ ! -f "${DIR}/docker-compose.yml" ]; then
+if [ ! -f "${DIR}/docker-compose.yml" -f "${DIR}/docker-compose.logging.yml" ]; then
     if [ -f "${DIR}/docker-compose.yml.example" ]; then
         echo "docker-compose.yml not found — seeding from docker-compose.yml.example"
         cp "${DIR}/docker-compose.yml.example" "${DIR}/docker-compose.yml"
@@ -161,7 +161,7 @@ echo "nginx config generated from config.yaml"
 mkdir -p "${DIR}/.data/tailscale/state"
 
 # Stop existing container if running
-if docker compose -f "${DIR}/docker-compose.yml" ps -q 2>/dev/null | grep -q .; then
+if docker compose -f "${DIR}/docker-compose.yml" -f "${DIR}/docker-compose.logging.yml" ps -q 2>/dev/null | grep -q .; then
     echo "Container is already running."
     read -p "Stop and restart? [y/N] " -n 1 -r
     echo
@@ -169,11 +169,11 @@ if docker compose -f "${DIR}/docker-compose.yml" ps -q 2>/dev/null | grep -q .; 
         echo "Aborted."
         exit 0
     fi
-    docker compose -f "${DIR}/docker-compose.yml" down
+    docker compose -f "${DIR}/docker-compose.yml" -f "${DIR}/docker-compose.logging.yml" down
 fi
 
 echo "Starting MT5 Windows VM..."
-docker compose -f "${DIR}/docker-compose.yml" up -d
+docker compose -f "${DIR}/docker-compose.yml" -f "${DIR}/docker-compose.logging.yml" up -d
 
 API_HOST_PORT="${API_HOST_PORT:-8888}"
 echo ""
@@ -195,11 +195,11 @@ echo "Logs: docker compose -f ${DIR}/docker-compose.yml logs -f"
 echo ""
 echo "Waiting for VM to get an IP (for API port forwarding)..."
 for _ in $(seq 1 60); do
-    VM_IP=$(docker compose -f "${DIR}/docker-compose.yml" exec -T mt5 bash -c 'cat /var/lib/misc/dnsmasq.leases 2>/dev/null | awk "{print \$3}"' 2>/dev/null || true)
+    VM_IP=$(docker compose -f "${DIR}/docker-compose.yml" -f "${DIR}/docker-compose.logging.yml" exec -T mt5 bash -c 'cat /var/lib/misc/dnsmasq.leases 2>/dev/null | awk "{print \$3}"' 2>/dev/null || true)
     if [ -n "${VM_IP}" ]; then
         echo "VM IP: ${VM_IP}"
         for PORT in ${API_PORTS}; do
-            docker compose -f "${DIR}/docker-compose.yml" exec -T mt5 bash -c "
+            docker compose -f "${DIR}/docker-compose.yml" -f "${DIR}/docker-compose.logging.yml" exec -T mt5 bash -c "
                 iptables -t nat -C PREROUTING -p tcp --dport ${PORT} -j DNAT --to-destination ${VM_IP}:${PORT} 2>/dev/null || \
                 iptables -t nat -A PREROUTING -p tcp --dport ${PORT} -j DNAT --to-destination ${VM_IP}:${PORT}
                 iptables -t nat -C POSTROUTING -p tcp -d ${VM_IP} --dport ${PORT} -j MASQUERADE 2>/dev/null || \
@@ -224,12 +224,12 @@ fi
 # actual FQDN as a key, and the CLI is the only thing that knows it
 # both on stock Tailscale and Headscale. The result persists in
 # /var/lib/tailscale state, so it stays wired across restarts.
-if [ -n "${TS_AUTHKEY}" ] && docker compose -f "${DIR}/docker-compose.yml" ps --services --filter status=running 2>/dev/null | grep -qx tailscale; then
+if [ -n "${TS_AUTHKEY}" ] && docker compose -f "${DIR}/docker-compose.yml" -f "${DIR}/docker-compose.logging.yml" ps --services --filter status=running 2>/dev/null | grep -qx tailscale; then
     echo ""
     echo "Waiting for Tailscale to authenticate..."
     TS_READY=0
     for _ in $(seq 1 30); do
-        if docker compose -f "${DIR}/docker-compose.yml" exec -T tailscale tailscale status >/dev/null 2>&1; then
+        if docker compose -f "${DIR}/docker-compose.yml" -f "${DIR}/docker-compose.logging.yml" exec -T tailscale tailscale status >/dev/null 2>&1; then
             TS_READY=1
             break
         fi
@@ -238,7 +238,7 @@ if [ -n "${TS_AUTHKEY}" ] && docker compose -f "${DIR}/docker-compose.yml" ps --
     if [ "${TS_READY}" = "1" ]; then
         # Idempotent: reset to clear any stale config from a previous
         # serve.json era, then install the single Web handler.
-        docker compose -f "${DIR}/docker-compose.yml" exec -T tailscale sh -c '
+        docker compose -f "${DIR}/docker-compose.yml" -f "${DIR}/docker-compose.logging.yml" exec -T tailscale sh -c '
             tailscale serve reset >/dev/null 2>&1 || true
             tailscale serve --bg --http=80 http://nginx:80
         ' >/dev/null && echo "Tailscale Serve wired: tailnet :80 → nginx:80" ||

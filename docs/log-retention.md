@@ -20,6 +20,9 @@ with the existing customized compose file. It caps each listed container at
 Sync api_runner.bat, api_log_runner.py and mt5api/logger.py to data/shared, stop
 API writers by gracefully stopping the VM, retain diagnostic samples, remove old
 closed logs, and recreate mt5, wickworks, nginx and log-rotator with both files.
+After container recreation restore the configured API-port DNAT rules from
+run.sh (VM address comes from dnsmasq.leases), then verify Gateway upstream
+health. run.sh includes the logging override on every Compose invocation.
 The VM interruption requires a maintenance window and checking upstream positions,
 pending orders and gateway operations first. Never delete the Windows disk,
 gateway data volume, terminal history, or live Docker log files.
