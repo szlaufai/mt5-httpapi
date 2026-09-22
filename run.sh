@@ -54,6 +54,7 @@ cp "${DIR}/scripts/reboot.bat" "${DIR}/data/shared/scripts/reboot.bat"
 # Boot-stamped lock acquire used by both start.bat and install.bat.
 cp "${DIR}/scripts/acquire_lock.ps1" "${DIR}/data/shared/scripts/acquire_lock.ps1"
 cp "${DIR}/scripts/api_runner.bat" "${DIR}/data/shared/scripts/api_runner.bat"
+cp "${DIR}/scripts/api_log_runner.py" "${DIR}/data/shared/scripts/api_log_runner.py"
 cp "${DIR}/scripts/compile-warmup-ea.bat" "${DIR}/data/shared/scripts/compile-warmup-ea.bat"
 cp "${DIR}/scripts/check_health.py" "${DIR}/data/shared/scripts/check_health.py"
 cp "${DIR}/scripts/config_helper.py" "${DIR}/data/shared/scripts/config_helper.py"

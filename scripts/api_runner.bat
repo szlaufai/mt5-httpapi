@@ -24,7 +24,7 @@ echo [%DATE% %TIME%] [api:!AR_BROKER!/!AR_ACCOUNT!/!AR_INSTANCE!] === PROCESS ST
 echo [%DATE% %TIME%] [start] [api:!AR_BROKER!/!AR_ACCOUNT!/!AR_INSTANCE!] PROCESS STARTED on port !AR_PORT! utc_offset=!AR_OFFSET! mode=!AR_MODE! >> "%FULL_LOG%"
 
 cd /d "%SHARED%"
-"%PYDIR%\python.exe" -m mt5api --broker !AR_BROKER! --account !AR_ACCOUNT! --instance !AR_INSTANCE! --port !AR_PORT! --token "!AR_TOKEN!" --utc-offset "!AR_OFFSET!" --mode "!AR_MODE!" >> "!AR_LOG!" 2>&1
+"%PYDIR%\python.exe" "%SHARED%\scripts\api_log_runner.py" "!AR_LOG!" --broker !AR_BROKER! --account !AR_ACCOUNT! --instance !AR_INSTANCE! --port !AR_PORT! --token "!AR_TOKEN!" --utc-offset "!AR_OFFSET!" --mode "!AR_MODE!"
 set "AR_EC=!ERRORLEVEL!"
 
 echo [%DATE% %TIME%] [api:!AR_BROKER!/!AR_ACCOUNT!/!AR_INSTANCE!] === PROCESS EXITED exit_code=!AR_EC! === >> "!AR_LOG!"

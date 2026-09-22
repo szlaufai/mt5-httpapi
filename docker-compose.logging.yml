@@ -1,0 +1,18 @@
+x-bounded-logging: &bounded
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+services:
+  mt5:
+    logging: *bounded
+  nginx:
+    logging: *bounded
+  wickworks:
+    logging: *bounded
+  log-rotator:
+    logging: *bounded
+    environment:
+      INTERVAL: "60"
+      RETAIN_DAYS: "7"
+      MAX_DIRECTORY_KB: "1048576"

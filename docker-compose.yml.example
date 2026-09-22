@@ -1,5 +1,12 @@
+x-bounded-logging: &bounded
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
 services:
   mt5:
+    logging: *bounded
     image: dockurr/windows:5.14
     environment:
       RAM_SIZE: "4G"
@@ -37,6 +44,7 @@ services:
   # gateway 20.20.20.1:8000). No ports published; nothing else on the
   # docker network can talk to it.
   wickworks:
+    logging: *bounded
     image: psyb0t/wickworks:v0.3.1
     restart: unless-stopped
     network_mode: "service:mt5"
@@ -47,18 +55,15 @@ services:
     depends_on:
       - mt5
 
-  # Daily log rotator. Rotates data/shared/logs/*.log to *.log.YYYYMMDD
-  # at the day boundary and prunes archives older than RETAIN_DAYS.
-  # Truncate-in-place so the Python API's open log handles keep working
-  # without reopening. Hourly check, idempotent (keyed on yesterday's
-  # archive existing).
+  # Lifecycle rotation and archive retention; API output rotates in its writer.
   log-rotator:
+    logging: *bounded
     image: alpine:3.20
     restart: unless-stopped
     environment:
       LOG_DIR: /logs
       RETAIN_DAYS: "7"
-      INTERVAL: "3600"
+      INTERVAL: "60"
     volumes:
       - ./data/shared/logs:/logs
       - ./scripts/rotate-logs.sh:/rotate.sh:ro
@@ -120,6 +125,7 @@ services:
       - mt5
 
   nginx:
+    logging: *bounded
     image: nginx:1.30.0-alpine3.23
     restart: unless-stopped
     ports:

@@ -19,11 +19,9 @@ RUN grep -v -i '^MetaTrader5' /tmp/requirements-api.txt > /tmp/req-test.txt && \
 
 COPY mt5api ./mt5api
 COPY tests ./tests
-# tests/test_terminal_instances.py loads this by path as
-# <repo>/scripts/config_helper.py. Without it those two tests fail with
-# FileNotFoundError. Copied individually rather than the whole scripts/ dir so
-# the image doesn't pull in defender-remover and the Windows .bat files.
-COPY scripts/config_helper.py ./scripts/config_helper.py
+# Tests load these deployment helpers by path.
+COPY scripts/config_helper.py scripts/api_log_runner.py scripts/rotate-logs.sh ./scripts/
+
 
 ENV PYTHONPATH=/app
 ENV PYTHONDONTWRITEBYTECODE=1
